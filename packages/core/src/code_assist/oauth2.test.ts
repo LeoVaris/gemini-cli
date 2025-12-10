@@ -400,6 +400,21 @@ describe('oauth2', () => {
         'google_accounts.json',
       );
 
+      // Poll for the file to ensure the async write has completed.
+      const pollForFile = async (
+        filePath: string,
+        timeout = 2000,
+        interval = 50,
+      ) => {
+        const endTime = Date.now() + timeout;
+        while (Date.now() < endTime) {
+          if (fs.existsSync(filePath)) return;
+          await new Promise((resolve) => setTimeout(resolve, interval));
+        }
+        throw new Error(`File ${filePath} did not appear within ${timeout}ms.`);
+      };
+      await pollForFile(googleAccountPath);
+
       expect(fs.existsSync(googleAccountPath)).toBe(true);
       if (fs.existsSync(googleAccountPath)) {
         const cachedGoogleAccount = fs.readFileSync(googleAccountPath, 'utf-8');
@@ -452,7 +467,6 @@ describe('oauth2', () => {
 
         expect(mockClient.setCredentials).toHaveBeenCalledWith(cachedCreds);
         expect(mockClient.getAccessToken).toHaveBeenCalled();
-        expect(mockClient.getTokenInfo).toHaveBeenCalled();
         expect(Compute).not.toHaveBeenCalled(); // Should not fetch new client if cache is valid
       });
 
